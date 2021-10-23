@@ -213,13 +213,12 @@ public class WaltTest {
         Random random = new Random();
 
         for (Customer customer: customerRepository.findAll()) {
-
             for (Restaurant restaurant : restaurantRepository.findAllByCity(customer.getCity())) {
                 Date deliveryTime = new Date("10/23/2021 " + Integer.toString(random.nextInt(13)) + ":00:00");
                 Delivery delivery = waltService.createOrderAndAssignDriver(customer, restaurant, deliveryTime);
 
                 if(delivery != null) {
-                    assertTrue(0 <= delivery.getDistance() && delivery.getDistance() <= 20);
+                    assertTrue(0 <= delivery.getDistance() && delivery.getDistance() <= 20.0);
                 }
             }
         }
@@ -230,21 +229,21 @@ public class WaltTest {
         Customer customer = customerRepository.findByName("Beethoven");
         Restaurant restaurant = restaurantRepository.findByName("cafe");
         Date deliveryTime = new Date("10/23/2021 11:00:00");
-        long countOfDelivery = deliveryRepository.count();
+        long totalDeliveriesCount = deliveryRepository.count();
 
         Delivery delivery = waltService.createOrderAndAssignDriver(customer, restaurant, deliveryTime);
 
         assertNotNull(delivery);
-        assertEquals(deliveryRepository.count(),countOfDelivery + 1);
-        assertEquals(delivery.getCustomer(),customer);
-        assertEquals(delivery.getRestaurant(),restaurant);
+        assertEquals(deliveryRepository.count(),totalDeliveriesCount + 1);
+        assertEquals(delivery.getCustomer(), customer);
+        assertEquals(delivery.getRestaurant(), restaurant);
         assertEquals(delivery.getDeliveryTime(), deliveryTime);
 
         assertTrue(Objects.equals(delivery.getDriver().getName(), "Mary") ||
                             Objects.equals(delivery.getDriver().getName(), "Patricia") ||
                             Objects.equals(delivery.getDriver().getName(), "Daniel"));
 
-        assertTrue(0 <= delivery.getDistance() && delivery.getDistance() <= 20);
+        assertTrue(0 <= delivery.getDistance() && delivery.getDistance() <= 20.0);
     }
 
    @Test
@@ -252,16 +251,12 @@ public class WaltTest {
        Random random = new Random();
 
        for (Driver driver : driverRepository.findAll()) {
-
+           List<Restaurant> restaurants  = restaurantRepository.findAllByCity(driver.getCity());
+           if(restaurants.isEmpty()) continue;
+           Restaurant firstRestaurant = restaurants.get(0);
            for (Customer customer : customerRepository.findAllByCity(driver.getCity())) {
-
-               List<Restaurant> restaurants  = restaurantRepository.findAllByCity(driver.getCity());
-
-               if(restaurants.size() > 0) {
-                   Restaurant restaurant = restaurants.get(0);
-                   Date deliveryTime = new Date("10/23/2021 " + Integer.toString(random.nextInt(13)) + ":00:00");
-                   Delivery delivery = waltService.createOrderAndAssignDriver(customer, restaurant, deliveryTime);
-               }
+               Date deliveryTime = new Date("10/23/2021 " + Integer.toString(random.nextInt(13)) + ":00:00");
+               Delivery delivery = waltService.createOrderAndAssignDriver(customer, firstRestaurant, deliveryTime);
            }
        }
 
@@ -269,17 +264,16 @@ public class WaltTest {
        assertEquals(list.size(), driverRepository.count());
 
 
-       double topDistance = Integer.MAX_VALUE;
+       double prevDriverTotalDistance = Integer.MAX_VALUE;
        for (DriverDistance driverRank: list) {
+           assertTrue(driverRank.getTotalDistance() <= prevDriverTotalDistance);
+           prevDriverTotalDistance = driverRank.getTotalDistance();
 
-           assertTrue(driverRank.getTotalDistance() <= topDistance);
-           topDistance = driverRank.getTotalDistance();
-
-           double totalDistance = 0;
+           double currentDriverTotalDistance = 0;
            for (Delivery delivery: deliveryRepository.findAllByDriver(driverRank.getDriver())) {
-               totalDistance = totalDistance + delivery.getDistance();
+               currentDriverTotalDistance += delivery.getDistance();
            }
-           assertTrue(totalDistance == driverRank.getTotalDistance());
+           assertTrue(currentDriverTotalDistance == driverRank.getTotalDistance());
        }
 
    }
@@ -298,22 +292,16 @@ public class WaltTest {
 
         waltService.createOrderAndAssignDriver(customer1, restaurant1, deliveryTime);
         waltService.createOrderAndAssignDriver(customer1, restaurant1, deliveryTime);
-        Delivery delivery = waltService.createOrderAndAssignDriver(customer2, restaurant2, deliveryTime);
+        waltService.createOrderAndAssignDriver(customer2, restaurant2, deliveryTime);
 
         List<DriverDistance> list = waltService.getDriverRankReportByCity(city);
 
         assertEquals(list.size(), driverRepository.findAllDriversByCity(city).size());
 
-        double topDistance = 20;
+        double prevDriverTotalDistance = Integer.MAX_VALUE;
         for (DriverDistance driverRank: list) {
-
-            assertEquals(driverRank.getDriver().getCity().getName(), city.getName());
-
-            assertTrue(topDistance >= driverRank.getTotalDistance());
-            topDistance = driverRank.getTotalDistance();
-
-            assertNotEquals(driverRank.getDriver().getCity().getName(),
-                            delivery.getDriver().getCity().getName());
+            assertTrue(driverRank.getTotalDistance() <= prevDriverTotalDistance);
+            prevDriverTotalDistance = driverRank.getTotalDistance();
         }
     }
 
