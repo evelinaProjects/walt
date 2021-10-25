@@ -5,7 +5,6 @@ import com.walt.dao.DeliveryRepository;
 import com.walt.dao.DriverRepository;
 import com.walt.dao.DriverDistanceImplRepository;
 import com.walt.model.*;
-import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
